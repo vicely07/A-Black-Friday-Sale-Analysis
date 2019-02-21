@@ -1,0 +1,74 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+c---
+title: "Lab11"
+author: "Ibe Chukwudi Joshua,  Ly Vi,  Olichwier Shawn"
+date: "November 15, 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+To find out if different age groups affecting the Black Friday sales, we will first look at the two specific columns "Age" and "Purchase" from the data set.
+```{r}
+
+Bfriday <- read.csv("C:/Users/lykha/Documents/BlackFriday.csv")
+
+head(Bfriday[,c("Age", "Purchase")])
+```
+As we can see, we have many different age groups in the "Age" column. Those age groups and their total sale are listed below:
+```{r}
+agegroup <- aggregate(Purchase ~ Age, Bfriday, sum)
+agegroup
+```
+Because there are more than 2 age group, we would perform the Anova test. Our NULL hypothesis (H0) would be the means from different age group are all equal. The althernative hypothesis would be all the means are different from each other.
+```{r}
+anova(lm(Purchase ~ Age, data = Bfriday))
+```
+Since the p-value is very small, we would reject the NULL hypothesis. However, we are not very confident with this results because we didn't check if the data is normally distributed when we first do the Anova test. Therefore, we now create a exploratory plot to ensure that our result is accurate.
+First, we created a histogram of the Purchase.
+```{r}
+hist(resid(lm(Purchase ~ Age, data = Bfriday)), main = "Histogram of Purchase", xlab = "Purchase")
+```
+The histogram doesn't seem normal at all, but we can't conclude any thing yet. We then perform the qqnorm to check:
+```{r}
+qqnorm(resid(lm(Purchase ~ Age, data = Bfriday)))
+qqline(resid(lm(Purchase ~ Age, data = Bfriday)))
+
+#anova(lm(Purchase ~ Age, data = Bfriday))$F[1]
+
+#summary(aov(Purchase ~ Age, data = Bfriday))
+
+```
+The plot doesn't follow the normal line at all. Therefore, we can conclude that the data provided is not normally distributed. That means our p-value from the previous Anova test is not accurate. 
+At this stage, we have to perform permutation Anova test to get an accurate p-value because Permutation test doesn't require normal distrubition on origianal data. We resample from the data 500,000 times (the number of purchases in Black Friday dataset) without replacement. Then we repeat this process of resampling 10,000 times. Our NULL hypothesis (H0) would be the means from different age group are all equal. The althernative hypothesis would be all the means are different from each other.
+```{r}
+observed <- anova(lm(Purchase ~ Age, data = Bfriday))$F[1]
+
+n <- length(Bfriday$Purchase)
+N <- 10^4 - 1
+results <- numeric(N)
+for (i in 1:N)
+{
+ index <- sample(n)
+ Purchase.perm <- Bfriday$Purchase[index]
+ results[i] <- anova(lm(Purchase.perm ~ Age, data = Bfriday))$F[1]
+}
+
+(sum(results >= observed) + 1) / (N + 1)
+```
+
+We set our observed t-statistic equal to the F-value of the original Anova tets. We calculate the new p-value by finding the probility of the sum of all the resampled F-values that is larger or equal to the observed F-value with  10,000 (the number of repetitions). Eventually, we got our p-value equal to The p-value is 1e-04 which is really small so we have to reject th null hypothesis. Therefore, we can confidently conclude that the age difference does effect  the blackfriday sales significantly. 
+
+In order to find out which age groups have the moesPairwise t-test.
+```{r}
+attach(Bfriday)
+pairwise.t.test(Purchase, Age)
+
+```
+There is not big significant among 18-25, 36-45 and 46-50. These three groups have the most positive impacts on the purchase. These seems to be true since these age groups has good income source and tend to spend a lot on good deal. In the opposite,the 0-17 doesn't have good income and the 51-over 55 is skeptical on buying on Black Friday.
+Conclusion, the adverising should targer the age groups of.... and genders of...
